@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Naro Taxonomy
  * Description:       A custom plugin to register taxonomies and provide AJAX-based filtering for posts.
- * Version:           0.1.20250831.125724
+ * Version:           0.2.20250831.162645
  * Author:            Naro
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
@@ -18,90 +18,135 @@ if (!defined('WP_DEBUG')) define('WP_DEBUG', true);
 if (!defined('WP_DEBUG_DISPLAY')) define('WP_DEBUG_DISPLAY', true);
 ini_set('display_errors', 1);
 
-/**
- * Registers the 'qualification' taxonomy for posts.
- *
- * This taxonomy is hierarchical and is used to categorize posts by Qualifications.
- */
-function register_qualification_taxonomy() {
-    $labels = array(
-        'name'              => 'Qualifications',
-        'singular_name'     => 'Qualification',
-        'search_items'      => 'Search Qualifications',
-        'all_items'         => 'All Qualifications',
-        'parent_item'       => 'Parent Qualification',
-        'parent_item_colon' => 'Parent Qualification:',
-        'edit_item'         => 'Edit Qualification',
-        'update_item'       => 'Update Qualification',
-        'add_new_item'      => 'Add New Qualification',
-        'new_item_name'     => 'New Qualification Name',
-        'menu_name'         => 'Qualification',
-    );
-    $args = array(
-        'hierarchical'      => true,
-        'labels'            => $labels,
-        'show_ui'           => true,
-        'show_admin_column' => true,
-        'query_var'         => true,
-        'rewrite'           => array( 'slug' => 'qualification' ),
-    );
-    register_taxonomy( 'qualification', array( 'post' ), $args );
-}
-add_action( 'init', 'register_qualification_taxonomy' );
 
-function register_discipline_taxonomy() {
-    $labels = array(
-        'name'              => 'Disciplines',
-        'singular_name'     => 'Discipline',
-        'search_items'      => 'Search Disciplines',
-        'all_items'         => 'All Disciplines',
-        'parent_item'       => 'Parent Discipline',
-        'parent_item_colon' => 'Parent Discipline:',
-        'edit_item'         => 'Edit Discipline',
-        'update_item'       => 'Update Discipline',
-        'add_new_item'      => 'Add New Discipline',
-        'new_item_name'     => 'New Discipline Name',
-        'menu_name'         => 'Discipline',
+// Settings page and dynamic taxonomy registration
+add_action('admin_menu', function() {
+    add_options_page(
+        'Naro Taxonomies',
+        'Naro Taxonomies',
+        'manage_options',
+        'naro-taxonomies',
+        'naro_taxonomies_settings_page'
     );
-    $args = array(
-        'hierarchical'      => true,
-        'labels'            => $labels,
-        'show_ui'           => true,
-        'show_admin_column' => true,
-        'query_var'         => true,
-        'rewrite'           => array( 'slug' => 'discipline' ),
-    );
-    register_taxonomy( 'discipline', array( 'post' ), $args );
-}
-add_action( 'init', 'register_discipline_taxonomy' );
+});
 
-/** Registers the 'modality' taxonomy for posts.
- *
- * This taxonomy is hierarchical and is used to categorize posts by Modalities.
- */
-function register_modality_taxonomy() {
-    $labels = array(
-        'name'              => 'Modalities',
-        'singular_name'     => 'Modality',
-        'search_items'      => 'Search Modalities',
-        'all_items'         => 'All Modalities',
-        'edit_item'         => 'Edit Modality',
-        'update_item'       => 'Update Modality',
-        'add_new_item'      => 'Add New Modality',
-        'new_item_name'     => 'New Modality Name',
-        'menu_name'         => 'Modality',
-    );
-    $args = array(
-        'hierarchical'      => true,
-        'labels'            => $labels,
-        'show_ui'           => true,
-        'show_admin_column' => true,
-        'query_var'         => true,
-        'rewrite'           => array( 'slug' => 'modality' ),
-    );
-    register_taxonomy( 'modality', array( 'post' ), $args );
+function naro_taxonomies_settings_page() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+    
+    // Handle form submission
+    if (isset($_POST['naro_taxo_save']) && check_admin_referer('naro_taxo_save_taxonomies')) {
+        $taxonomies = array();
+        if (!empty($_POST['taxonomies']) && is_array($_POST['taxonomies'])) {
+            foreach ($_POST['taxonomies'] as $tax) {
+                if (empty($tax['label'])) continue;
+                $label = sanitize_text_field($tax['label']);
+                $name = !empty($tax['name']) ? $tax['name'] : $label;
+                // If the last character is `y` then pluralize with `ies` else `s`
+                $plural = (substr($label, -1) === 'y') ? substr($label, 0, -1) . 'ies' : $label . 's';
+                $label_plural = !empty($tax['label_plural']) ? sanitize_text_field($tax['label_plural']) : $plural  ;
+                $label_front = !empty($tax['label_front']) ? sanitize_text_field($tax['label_front']) : $label;
+                $taxonomies[] = array(
+                    'name' => sanitize_key($name),
+                    'label' => $label,
+                    'label_plural' => $label_plural,
+                    'label_front' => $label_front,
+                    'hierarchical' => !empty($tax['hierarchical']) ? true : false,
+                );
+            }
+        }
+        update_option('naro_taxo_custom_taxonomies', $taxonomies);
+        echo '<div class="updated"><p>Taxonomies saved.</p></div>';
+    }
+    $taxonomies = get_option('naro_taxo_custom_taxonomies', array());
+
+    // You can add some default taxonomies here :
+    // $taxonomies = get_option('naro_taxo_custom_taxonomies', array(
+    //     array('name'=>'qualification','label'=>'Qualification','hierarchical'=>true),
+    //     array('name'=>'discipline','label'=>'Discipline','hierarchical'=>true),
+    //     array('name'=>'modality','label'=>'Modality','hierarchical'=>true),
+    // ));
+
+    ?>
+    <div class="wrap">
+        <h1>Naro Custom Taxonomies</h1>
+        <form method="post">
+            <?php wp_nonce_field('naro_taxo_save_taxonomies'); ?>
+            <table class="form-table" id="naro-taxo-table">
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Plural Label</th>
+                        <th>Form Label</th>
+                        <th>Hierarchical</th>
+                        <th>Slug</th>
+                        <th>Remove</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($taxonomies as $i => $tax) : ?>
+                    <tr>
+                        <td><input name="taxonomies[<?php echo $i; ?>][label]" value="<?php echo esc_attr($tax['label']); ?>" required></td>
+                        <td><input name="taxonomies[<?php echo $i; ?>][label_plural]" value="<?php echo esc_attr($tax['label_plural']); ?>"></td>
+                        <td><input name="taxonomies[<?php echo $i; ?>][label_front]" value="<?php echo esc_attr($tax['label_front']); ?>"></td>
+                        <td><input type="checkbox" name="taxonomies[<?php echo $i; ?>][hierarchical]" value="1" <?php checked($tax['hierarchical']); ?>></td>
+                        <td><input name="taxonomies[<?php echo $i; ?>][name]" value="<?php echo esc_attr($tax['name']); ?>"></td>
+                        <td><button class="remove-taxonomy button">Remove</button></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <button id="add-taxonomy" class="button">Add Taxonomy</button>
+            <p class="submit"><input type="submit" name="naro_taxo_save" class="button-primary" value="Save Changes"></p>
+        </form>
+    </div>
+    <script>
+    document.getElementById('add-taxonomy').addEventListener('click', function(e) {
+        e.preventDefault();
+        var table = document.getElementById('naro-taxo-table').getElementsByTagName('tbody')[0];
+        var idx = table.rows.length;
+        row = table.insertRow();
+        row.innerHTML = `<td><input name="taxonomies[${idx}][label]" required></td><td><input name="taxonomies[${idx}][label_plural]"></td><td><input name="taxonomies[${idx}][label_front]"></td><td><input type="checkbox" name="taxonomies[${idx}][hierarchical]" value="1"></td><td><input name="taxonomies[${idx}][name]"></td><td><button class="remove-taxonomy button">Remove</button></td>`;
+    });
+    document.getElementById('naro-taxo-table').addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-taxonomy')) {
+            e.preventDefault();
+            e.target.closest('tr').remove();
+        }
+    });
+    </script>
+    <?php
 }
-add_action( 'init', 'register_modality_taxonomy' );
+
+// Register taxonomies dynamically
+add_action('init', function() {
+    $taxonomies = get_option('naro_taxo_custom_taxonomies', array());
+    foreach ($taxonomies as $tax) {
+        $labels = array(
+            'name' => $tax['name'],
+            'singular_name' => $tax['label'],
+            'search_items' => 'Search ' . $tax['label_plural'],
+            'all_items' => 'All ' . $tax['label_plural'],
+            'parent_item' => 'Parent ' . $tax['label'],
+            'parent_item_colon' => 'Parent ' . $tax['label'] . ':',
+            'edit_item' => 'Edit ' . $tax['label'],
+            'update_item' => 'Update ' . $tax['label'],
+            'add_new_item' => 'Add New ' . $tax['label'],
+            'new_item_name' => 'New ' . $tax['label'] . ' Name',
+            'menu_name' => $tax['label_plural'],
+        );
+        $args = array(
+            'hierarchical' => !empty($tax['hierarchical']),
+            'labels' => $labels,
+            'show_ui' => true,
+            'show_admin_column' => true,
+            'query_var' => true,
+            'rewrite' => array('slug' => $tax['name']),
+        );
+        register_taxonomy($tax['name'], array('post'), $args);
+    }
+});
 
 /**
  * Generates and returns an HTML form with dropdowns for custom taxonomies.
@@ -122,53 +167,34 @@ function create_custom_taxonomy_search_form($atts) {
     $is_redirect_form = !empty($atts['result_page_id']);
     $form_action = $is_redirect_form ? esc_url(get_permalink($atts['result_page_id'])) : '';
 
-    ob_start(); // Start output buffering
+    $taxonomies = get_option('naro_taxo_custom_taxonomies', array());
+    ob_start();
     ?>
     <form id="custom-taxonomy-search-form" class="custom-taxonomy-search-form" action="<?php echo $form_action; ?>" method="get">
         <input type="hidden" name="s" value="" />
+        <?php foreach ($taxonomies as $tax) : ?>
         <div class="form-group">
-            <label for="qualification">Je suis ...</label>
-            <select name="qualification">
+            <label for="<?php echo esc_attr($tax['name']); ?>"><?php echo esc_html($tax['label_front']); ?></label>
+            <select name="<?php echo esc_attr($tax['name']); ?>">
                 <option value=""></option>
                 <?php
-                $terms = get_terms('qualification', array('hide_empty' => true));
-                foreach ($terms as $term) {
-                    echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
+                $terms = get_terms($tax['name'], array('hide_empty' => true));
+                if (!is_wp_error($terms)) {
+                    foreach ($terms as $term) {
+                        echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
+                    }
                 }
                 ?>
             </select>
         </div>
-        <div class="form-group">
-            <label for="discipline">Je suis intéressé(e) par ...</label>
-            <select name="discipline">
-                <option value=""></option>
-                <?php
-                $terms = get_terms('discipline', array('hide_empty' => true));
-                foreach ($terms as $term) {
-                    echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
-                }
-                ?>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="modality">Je veux être formé(e) ...</label>
-            <select name="modality">
-                <option value=""></option>
-                <?php
-                $terms = get_terms('modality', array('hide_empty' => true));
-                foreach ($terms as $term) {
-                    echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
-                }
-                ?>
-            </select>
-        </div>
+        <?php endforeach; ?>
         <button type="submit">Search</button>
     </form>
     <?php if (!$is_redirect_form): ?>
     <div id="Rcustom-search-results">Pouet</div>
     <?php endif; ?>
     <?php
-    return ob_get_clean(); // Return the buffered content
+    return ob_get_clean();
 }
 add_shortcode('custom_search_form', 'create_custom_taxonomy_search_form');
 
@@ -183,40 +209,26 @@ function display_filtered_results_shortcode($atts) {
         'loop_item_id' => '',
     ), $atts);
 
+    $taxonomies = get_option('naro_taxo_custom_taxonomies', array());
     $tax_query = array('relation' => 'AND');
-
-    if (!empty($_GET['qualification'])) {
-        $tax_query[] = array(
-            'taxonomy' => 'qualification',
-            'field'    => 'slug',
-            'terms'    => sanitize_text_field($_GET['qualification']),
-        );
+    foreach ($taxonomies as $tax) {
+        $slug = $tax['name'];
+        if (!empty($_GET[$slug])) {
+            $tax_query[] = array(
+                'taxonomy' => $slug,
+                'field'    => 'slug',
+                'terms'    => sanitize_text_field($_GET[$slug]),
+            );
+        }
     }
-    if (!empty($_GET['discipline'])) {
-        $tax_query[] = array(
-            'taxonomy' => 'discipline',
-            'field'    => 'slug',
-            'terms'    => sanitize_text_field($_GET['discipline']),
-        );
-    }
-    if (!empty($_GET['modality'])) {
-        $tax_query[] = array(
-            'taxonomy' => 'modality',
-            'field'    => 'slug',
-            'terms'    => sanitize_text_field($_GET['modality']),
-        );
-    }
-
     $args = array(
         'post_type'      => 'post',
         'tax_query'      => $tax_query,
         'orderby'        => 'title',
         'order'          => 'ASC',
-        'posts_per_page' => 30, // Or your desired limit
+        'posts_per_page' => 30,
     );
-
     $query = new WP_Query($args);
-
     ob_start();
     if ($query->have_posts()) {
         while ($query->have_posts()) {
@@ -227,7 +239,6 @@ function display_filtered_results_shortcode($atts) {
     } else {
         echo 'Aucun résultat trouvé.';
     }
-
     return ob_get_clean();
 }
 add_shortcode('custom_search_results', 'display_filtered_results_shortcode');
