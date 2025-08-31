@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Naro Taxonomy
  * Description:       A custom plugin to register taxonomies and provide AJAX-based filtering for posts.
- * Version:           0.3.20250831.213853
+ * Version:           0.4.20250831.222849
  * Author:            Naro
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
@@ -176,6 +176,7 @@ function create_custom_taxonomy_search_form($atts) {
     ?>
     <form id="custom-taxonomy-search-form" class="custom-taxonomy-search-form" action="<?php echo $form_action; ?>" method="get">
         <input type="hidden" name="s" value="" />
+        <?php echo wp_nonce_field('naro_taxo_filter_form', 'naro_taxo_filter_nonce', true, false); ?>
         <?php foreach ($taxonomies as $tax) : ?>
         <div class="form-group">
             <label for="<?php echo esc_attr($tax['name']); ?>"><?php echo esc_html($tax['label_front']); ?></label>
@@ -213,6 +214,10 @@ function display_filtered_results_shortcode($atts) {
         'loop_item_id' => '',
     ), $atts);
 
+    // Nonce check for GET requests
+    if (isset($_GET['naro_taxo_filter_nonce']) && !wp_verify_nonce($_GET['naro_taxo_filter_nonce'], 'naro_taxo_filter_form')) {
+        return esc_html__('Security check failed.', 'naro-taxo');
+    }
     $taxonomies = get_option('naro_taxo_custom_taxonomies', array());
     $tax_query = array('relation' => 'AND');
     foreach ($taxonomies as $tax) {

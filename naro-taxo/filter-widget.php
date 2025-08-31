@@ -187,6 +187,14 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
             ]
         );
         $this->add_control(
+            'button_text',
+            [
+                'label' => __( 'Text', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::TEXT,
+                'default' => __( 'Search', 'naro-taxo' ),
+            ]
+        );
+        $this->add_control(
             'button_size',
             [
                 'label' => __( 'Size', 'naro-taxo' ),
@@ -266,6 +274,29 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
                 ],
             ]
         );
+        $this->add_group_control(
+            \Elementor\Group_Control_Border::get_type(),
+            [
+                'name' => 'button_border',
+                'selector' => '{{WRAPPER}} button',
+            ]
+        );
+        $this->add_responsive_control(
+            'radius_button',
+            [
+                'label' => __( 'Border Radius', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::DIMENSIONS,
+                'devices' => [ 'desktop', 'tablet', 'mobile' ],
+                'size_units' => [ 'px', '%' ],
+                'default' => [
+                    'unit' => 'px',
+					'isLinked' => true,
+                ],
+                'selectors' => [
+					'{{WRAPPER}} button' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+				],
+            ]
+        );
 		$this->end_controls_tab();
 
         $this->start_controls_tab(
@@ -300,6 +331,29 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
                 ],
             ]
         );
+        $this->add_group_control(
+            \Elementor\Group_Control_Border::get_type(),
+            [
+                'name' => 'button_hover_border',
+                'selector' => '{{WRAPPER}} button',
+            ]
+        );
+        $this->add_responsive_control(
+            'radius_hover_button',
+            [
+                'label' => __( 'Border Radius', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::DIMENSIONS,
+                'devices' => [ 'desktop', 'tablet', 'mobile' ],
+                'size_units' => [ 'px', '%' ],
+                'default' => [
+                    'unit' => 'px',
+					'isLinked' => true,
+                ],
+                'selectors' => [
+					'{{WRAPPER}} button' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+				],
+            ]
+        );
 		$this->end_controls_tab();
 		$this->end_controls_tabs();
         
@@ -319,29 +373,6 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
 				],
             ]
         );
-        $this->add_group_control(
-            \Elementor\Group_Control_Border::get_type(),
-            [
-                'name' => 'button_border',
-                'selector' => '{{WRAPPER}} button',
-            ]
-        );
-        $this->add_responsive_control(
-            'radius_button',
-            [
-                'label' => __( 'Border Radius', 'naro-taxo' ),
-                'type' => \Elementor\Controls_Manager::DIMENSIONS,
-                'devices' => [ 'desktop', 'tablet', 'mobile' ],
-                'size_units' => [ 'px', '%' ],
-                'default' => [
-                    'unit' => 'px',
-					'isLinked' => true,
-                ],
-                'selectors' => [
-					'{{WRAPPER}} button' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
-				],
-            ]
-        );
         $this->end_controls_section();
     }
 
@@ -352,23 +383,25 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
         $form_action = $is_redirect_form ? esc_url(get_permalink($results_page_id)) : '';
 
 		$taxonomies = get_option('naro_taxo_custom_taxonomies', array());
-		echo '<form id="custom-taxonomy-search-form" class="custom-taxonomy-search-form" action="' . esc_url($form_action) . '" method="get">';
-		echo '<input type="hidden" name="s" value="" />';
-		foreach ($taxonomies as $tax) {
-			echo '<div class="form-group">';
-            if ($this->get_settings_for_display('show_label') === 'yes') {
-                echo '<label for="' . esc_attr($tax['name']) . '">' . esc_html($tax['label_front']) . '</label>';
+            echo '<form id="custom-taxonomy-search-form" class="custom-taxonomy-search-form" action="' . esc_url($form_action) . '" method="get">';
+            echo '<input type="hidden" name="s" value="" />';
+            // Add nonce field for security
+            echo wp_nonce_field('naro_taxo_filter_form', 'naro_taxo_filter_nonce', true, false);
+            foreach ($taxonomies as $tax) {
+                echo '<div class="form-group">';
+                if ($this->get_settings_for_display('show_label') === 'yes') {
+                    echo '<label for="' . esc_attr($tax['name']) . '">' . esc_html($tax['label_front']) . '</label>';
+                }
+                echo '<select name="' . esc_attr($tax['name']) . '"><option value=""></option>';
+                $terms = get_terms($tax['name'], array('hide_empty' => true));
+                if (!is_wp_error($terms)) {
+                    foreach ($terms as $term) {
+                        echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
+                    }
+                }
+                echo '</select></div>';
             }
-			echo '<select name="' . esc_attr($tax['name']) . '"><option value=""></option>';
-			$terms = get_terms($tax['name'], array('hide_empty' => true));
-			if (!is_wp_error($terms)) {
-				foreach ($terms as $term) {
-					echo '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
-				}
-			}
-			echo '</select></div>';
-		}
-		echo '<button type="submit">' . esc_html__('Search', 'naro-taxo') . '</button>';
-		echo '</form>';
+            echo '<button type="submit">' . esc_html__($this->get_settings_for_display('button_text'), 'naro-taxo') . '</button>';
+            echo '</form>';
 	}
 }

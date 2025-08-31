@@ -53,6 +53,38 @@ class Elementor_Result_Widget extends \Elementor\Widget_Base {
                 'default' => __( 'No results found.', 'naro-taxo' ),
             ]
         );
+        $this->add_responsive_control(
+            'number_columns',
+            [
+                'label' => __( 'Number of Columns', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::NUMBER,
+                'devices' => [ 'desktop', 'tablet', 'mobile' ],
+                'default' => 3,
+                'min' => 1,
+                'max' => 6,
+                'step' => 1,
+            ]
+        );
+        $this->add_responsive_control(
+            'spacing',
+            [
+                'label' => __( 'Spacing', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::SLIDER,
+                'devices' => [ 'desktop', 'tablet', 'mobile' ],
+                'unit' => 'px',
+                'default' => [
+                    'size' => 30,
+                    'unit' => 'px',
+                ],
+                'range' => [
+                    'px' => [
+                        'min' => 0,
+                        'max' => 1000,
+                        'step' => 1,
+                    ],
+                ],
+            ]
+        );
         $this->end_controls_section();
 
         // Register the style section
@@ -115,35 +147,33 @@ class Elementor_Result_Widget extends \Elementor\Widget_Base {
                 ],
             ]
         );
-        $this->add_responsive_control(
-            'number_columns',
+        $this->end_controls_section();
+
+        // Register the see more style section
+		$this->start_controls_section(
+			'section_more_style',
+			[
+				'label' => __( 'See More Button', 'naro-taxo' ),
+                'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+			]
+		);
+        $this->add_group_control(
+			\Elementor\Group_Control_Typography::get_type(),
+			[
+				'name' => 'more_typography',
+				'selector' => '{{WRAPPER}} span a',
+			]
+		);
+        $this->add_control(
+            'more_color',
             [
-                'label' => __( 'Number of Columns', 'naro-taxo' ),
-                'type' => \Elementor\Controls_Manager::NUMBER,
-                'devices' => [ 'desktop', 'tablet', 'mobile' ],
-                'default' => 3,
-                'min' => 1,
-                'max' => 6,
-                'step' => 1,
-            ]
-        );
-        $this->add_responsive_control(
-            'spacing',
-            [
-                'label' => __( 'Spacing', 'naro-taxo' ),
-                'type' => \Elementor\Controls_Manager::SLIDER,
-                'devices' => [ 'desktop', 'tablet', 'mobile' ],
-                'unit' => 'px',
-                'default' => [
-                    'size' => 30,
-                    'unit' => 'px',
-                ],
-                'range' => [
-                    'px' => [
-                        'min' => 0,
-                        'max' => 1000,
-                        'step' => 1,
-                    ],
+                'label' => __( 'Color', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::COLOR,
+                'selectors' => [
+					'{{WRAPPER}} span a' => 'color: {{VALUE}};',
+				],
+                'global' => [
+                    'default' => '',
                 ],
             ]
         );
@@ -151,6 +181,11 @@ class Elementor_Result_Widget extends \Elementor\Widget_Base {
 	}
 
 	protected function render() {
+		// Nonce check for GET requests
+		if (isset($_GET['naro_taxo_filter_nonce']) && !wp_verify_nonce($_GET['naro_taxo_filter_nonce'], 'naro_taxo_filter_form')) {
+			echo esc_html__('Security check failed.', 'naro-taxo');
+			return;
+		}
 		$settings = $this->get_settings_for_display();
 		$loop_item_id = !empty($settings['loop_item_id']) ? $settings['loop_item_id'] : '';
 		$taxonomies = get_option('naro_taxo_custom_taxonomies', array());
@@ -174,13 +209,13 @@ class Elementor_Result_Widget extends \Elementor\Widget_Base {
 		);
 		$query = new WP_Query($args);
 		if ($query->have_posts()) {
-            $gridStyleColumns = 'grid-template-columns: repeat(' . esc_attr($settings['number_columns']) . ', 1fr);';
-            $gridStyleGapColumns = 'grid-column-gap: ' . esc_attr($settings['spacing']['size']) . 'px;';
-            $gridStyleGapRows = 'grid-row-gap: ' . esc_attr($settings['spacing']['size']) . 'px;';
-            $gridStyle = 'display: grid;' . $gridStyleGapRows . $gridStyleGapColumns . $gridStyleColumns;
-            ?>
-            <div class="result-item" style="<?php echo esc_attr($gridStyle); ?>">
-            <?php
+			$gridStyleColumns = 'grid-template-columns: repeat(' . esc_attr($settings['number_columns']) . ', 1fr);';
+			$gridStyleGapColumns = 'grid-column-gap: ' . esc_attr($settings['spacing']['size']) . 'px;';
+			$gridStyleGapRows = 'grid-row-gap: ' . esc_attr($settings['spacing']['size']) . 'px;';
+			$gridStyle = 'display: grid;' . $gridStyleGapRows . $gridStyleGapColumns . $gridStyleColumns;
+			?>
+			<div class="result-item" style="<?php echo esc_attr($gridStyle); ?>">
+			<?php
 			while ($query->have_posts()) {
 				$query->the_post();
 					if ($loop_item_id) {
@@ -189,9 +224,9 @@ class Elementor_Result_Widget extends \Elementor\Widget_Base {
 						the_title('<h3>', '</h3>');
 					}
 			}
-            ?>
-            </div>
-            <?php
+			?>
+			</div>
+			<?php
 			wp_reset_postdata();
 		} else {
 			echo esc_html($settings['no_results_text']);
