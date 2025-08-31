@@ -2,10 +2,14 @@
 /**
  * Plugin Name:       Naro Taxonomy
  * Description:       A custom plugin to register taxonomies and provide AJAX-based filtering for posts.
- * Version:           0.2.20250831.162645
+ * Version:           0.3.20250831.213853
  * Author:            Naro
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ * 
+ * Requires Plugins: elementor
+ * Elementor tested up to: 3.31.3
+ * Elementor Pro tested up to: 3.31.2
  */
 
 // Exit if accessed directly.
@@ -242,3 +246,14 @@ function display_filtered_results_shortcode($atts) {
     return ob_get_clean();
 }
 add_shortcode('custom_search_results', 'display_filtered_results_shortcode');
+
+function register_naro_taxonomies_widgets( $widgets_manager ) {
+
+	require_once( __DIR__ . '/filter-widget.php' );
+	require_once( __DIR__ . '/result-widget.php' );
+
+	$widgets_manager->register( new \Elementor_Filter_Widget() );
+	$widgets_manager->register( new \Elementor_Result_Widget() );
+
+}
+add_action( 'elementor/widgets/register', 'register_naro_taxonomies_widgets' );
