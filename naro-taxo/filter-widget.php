@@ -217,6 +217,35 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
             ]
         );
         $this->add_responsive_control(
+            'position_button',
+            [
+                'label' => __( 'Position', 'naro-taxo' ),
+                'type' => \Elementor\Controls_Manager::CHOOSE,
+                'options' => [
+                    'left' => [
+                        'title' => __( 'Left', 'naro-taxo' ),
+                        'icon' => 'eicon-h-align-left',
+                    ],
+                    'center' => [
+                        'title' => __( 'Center', 'naro-taxo' ),
+                        'icon' => 'eicon-h-align-center',
+                    ],
+                    'right' => [
+                        'title' => __( 'Right', 'naro-taxo' ),
+                        'icon' => 'eicon-h-align-right',
+                    ],
+                    'stretch' => [
+                        'title' => __( 'Stretch', 'naro-taxo' ),
+                        'icon' => 'eicon-h-align-stretch',
+                    ],
+                ],
+                'default' => '',
+                'selectors' => [
+                    '{{WRAPPER}} .form-action' => 'justify-content: {{VALUE}};',
+                ],
+            ]
+        );
+        $this->add_responsive_control(
             'spacing_button',
             [
                 'label' => __( 'Spacing', 'naro-taxo' ),
@@ -401,7 +430,7 @@ class Elementor_Filter_Widget extends \Elementor\Widget_Base {
                 }
                 echo '</select></div>';
             }
-            echo '<button type="submit">' . esc_html__($this->get_settings_for_display('button_text'), 'naro-taxo') . '</button>';
+            echo '<div class="form-action" style="display:grid"><button type="submit">' . esc_html__($this->get_settings_for_display('button_text'), 'naro-taxo') . '</button></div>';
             echo '</form>';
 	}
 }

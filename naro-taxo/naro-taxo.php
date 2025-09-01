@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Naro Taxonomy
  * Description:       A custom plugin to register taxonomies and provide AJAX-based filtering for posts.
- * Version:           0.4.20250831.222849
+ * Version:           0.4.20250831.230415
  * Author:            Naro
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
@@ -193,7 +193,7 @@ function create_custom_taxonomy_search_form($atts) {
             </select>
         </div>
         <?php endforeach; ?>
-        <button type="submit">Search</button>
+        <div class="form-action"><button type="submit">Search</button></div>
     </form>
     <?php if (!$is_redirect_form): ?>
     <div id="Rcustom-search-results">Pouet</div>
